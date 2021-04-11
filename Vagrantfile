@@ -17,11 +17,11 @@ Vagrant.configure("2") do |config|
   ############################################################
   # Provision Docker with Vagrant before starting minikube
   ############################################################
-  config.vm.provision :docker do |d|
-    d.pull_images "neo4j"
-    d.run "neo4j",
-      args: "-d --name neo4j -p 7474:7474 -p 7687:7687 --env NEO4J_AUTH=neo4j/m222"
-  end
+  #config.vm.provision :docker do |d|
+  #  d.pull_images "neo4j"
+  #  d.run "neo4j",
+  #    args: "-d --name neo4j -p 7474:7474 -p 7687:7687 --env NEO4J_AUTH=neo4j/m222 --env=NEO4JLABS_PLUGINS=['apoc']"
+  #end
 
   # Disable automatic box update checking. If you disable this, then
   # boxes will only be checked for updates when the user runs
@@ -77,7 +77,19 @@ Vagrant.configure("2") do |config|
   # documentation for more information about their specific syntax and use.
   config.vm.provision "shell", inline: <<-SHELL
   apt-get update
-  apt-get -y install openjdk-8-jdk python3-pip
+  apt install apt-transport-https ca-certificates curl software-properties-common -y
+  curl -fsSL https://debian.neo4j.com/neotechnology.gpg.key | apt-key add -
+  add-apt-repository "deb https://debian.neo4j.com stable 4.1"
+  apt install neo4j -y
+  echo "dbms.default_listen_address=0.0.0.0" >> /etc/neo4j/neo4j.conf
+  neo4j-admin set-initial-password m222
+  cd /var/lib/neo4j/plugins/
+  wget https://github.com/neo4j-contrib/neo4j-apoc-procedures/releases/download/4.1.0.4/apoc-4.1.0.4-all.jar
+  chown neo4j /var/lib/neo4j/plugins/apoc-4.1.0.4-all.jar
+  echo "dbms.security.procedures.whitelist=apoc.coll.*,apoc.load.*,apoc.*" >> /etc/neo4j/neo4j.conf
+  systemctl enable neo4j.service
+  systemctl restart neo4j.service
+  apt-get -y install python3-pip
   pip3 install py2neo
   pip3 install Flask
   SHELL
